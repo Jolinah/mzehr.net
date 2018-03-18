@@ -1,25 +1,30 @@
-﻿SuperStrict
+SuperStrict
 
 Framework brl.blitz
 Import brl.basic
 Import brl.glmax2d
 
-'Modul importieren
+'Import the module
 Import mzehr.net
 
 AppTitle = "Server"
 SeedRnd(MilliSecs())
 
+'Some constants for the different types of network messages
+Const MSG_LOGIN:Int = 1
+Const MSG_NEWPLAYER:Int = 2
+Const MSG_REMOVEPLAYER:Int = 3
+Const MSG_KEYSTATE:Int = 4
+Const MSG_PLAYERSTATE:Int = 5
 
-'Kleine Klasse um Spieler-Infos zu speichern
+'Class containing player information
 Type TPlayer
-	'Name des Spielers
 	Field Name:String
 	
-	'Tasten-Stati des Spielers
+	'Key states
 	Field Keys:Byte[]
 	
-	'Position des Spielers
+	'Position
 	Field X:Float
 	Field Y:Float
 	
@@ -27,119 +32,100 @@ Type TPlayer
 		Keys = New Byte[256]
 	End Method
 
-	'Legt den Status einer Taste des Spielers fest (gedrückt/nicht gedrückt)
+	'Sets the key state of a specific key
 	Method SetKey(code:Int, pressed:Int)
 		If code >= 0 And code < Keys.Length Then
 			Keys[code] = pressed
 		End If
 	End Method
 	
-	'Fragt den Status einer Taste ab (gedrückt/nicht gedrückt)
+	'Gets the key state of a specific key
 	Method GetKey:Int(code:Int)
 		If code >= 0 And code < Keys.Length Then Return Keys[code]
 		Return False
 	End Method
 End Type
 
-
-
-'Einen Server auf Port 50000 mit maximal 10 Clients/Spielern erstellen
+'Create a server on port 50000 with a maximum of 10 clients/players
 Global server:TNetServer = TNetServer.Create(Null, 50000, 10)
-
-'Fehlermeldung anzeigen wenn der Server nicht initialisiert werden konnte
 If server = Null Then
-	Notify("Der Server konnte nicht initialisiert werden.")
+	Notify("The server could not be initialized. Maybe the port is already in use?")
 	End
 End If
 
-'Grafik initialisieren (bei einem Server eigentlich nicht notwendig)
 Graphics 200, 200, 0
 
-'Variablen für Positions-Updates an alle Spieler
+'Variables for position updates to players
 Local lastPosUpdate:Int = 0
 Local numPosUpdates:Int = 10
 
-'Variablen für die Zeitmessung eines Frames (Frame-Unabhängige Programmierung)
+'Frame measurement for frame independent movement
 Local deltaTime:Float = 0
 Local lastFrame:Int = MilliSecs()
 
-'Hauptschleife des Server-Programms
 Repeat
 deltaTime = (MilliSecs() - lastFrame) / 1000.0
 lastFrame = MilliSecs()
 Cls
-
-	'Server aktualisieren (Nachrichten senden/empfangen)
+	'Update the server (receive/send)
 	Local event:TNetServerEvent = server.Update()
-
-	'Solange Events vorhanden sind, diese abarbeiten und Update erneut ausführen
-	'bis kein Event mehr zurückgegeben wird	
 	While event <> Null
 	
 		Select event.event
-			'Ein Client/Spieler hat sich mit dem Server verbunden
+			'A new client connected to the server
 			Case TNetServerEvent.CONNECT
-				'Spieler-Objekt erstellen
+				'Create a player object
 				Local player:TPlayer = New TPlayer
 				player.X = Rand(20, 780)
 				player.Y = Rand(20, 580)
 				
-				'Objekt dem Client zuweisen
+				'Assign it to the peer object
 				event.Peer.SetData(player)
 				
-				'Bereits verbundene Spieler müssen noch über den neuen Spieler informiert werden
-				'Dies wird allerdings erst gemacht wenn der Name des Spielers bekannt ist
-				'(siehe DatenVerarbeitung_NichtAngemeldet)
+				'Other players will be informed about the new player only after a successful login
 				
-				
-			'Ein Client/Spieler hat den Server verlassen
+			'A client disconnected from the server
 			Case TNetServerEvent.DISCONNECT
-				'Allen verbundenen Clients/Spielern mitteilen dass dieser Spieler
-				'nicht mehr verbunden ist
-				SendeTrennungsNachricht(event)
+				'Tell all other clients that this player has left
+				SendPlayerDisconnected(event)
 			
-				'Zuvor erstelltes Spieler-Objekt entfernen
+				'Remove the player from the peer object
 				event.Peer.SetData(Null)
 				
 			
-			'Ein Client/Spieler hat Daten gesendet
+			'Received data from a client
 			Case TNetServerEvent.DATA
-				'Mit dieser Zeile wird das Spieler-Objekt geholt, das zuvor zugewiesen wurde (bei CONNECT)
+				'Fetch the previously created player object (on CONNECT) from the peer object
 				Local player:TPlayer = TPlayer(event.Peer.GetData())
 
-				'Daten zwecks Übersichtlichkeit in einer separaten Funktion verarbeiten			
 				If player.Name = Null Then
-					'Wenn der Spieler noch keinen Namen hat, dannt wird nur die Nachricht mit der Nr. 1 akzeptiert
-					DatenVerarbeitung_NichtAngemeldet(event)
+					'If the player does not have a name yet, only messages of type MSG_LOGIN will be accepted.
+					ProcessData_NotLoggedIn(event)
 				Else
-					'Wenn der Spieler anschliessend einen Namen gesendet hat (mit der Nachricht Nr. 1),
-					'werden vom Server auch Nachrichten mit anderen Nummern verarbeitet
-					DatenVerarbeitung_Angemeldet(event)
+					'After the player has successfully logged in, we will accept different messages.
+					ProcessData_LoggedIn(event)
 				End If
-			
 		End Select
 		
-		'Update erneut ausführen
 		event = server.Update()
 	Wend
 	
-	
-	'Welt/Spieler aktualisieren
+	'Update all players
 	For Local peer:TNetPeer = EachIn server.GetClients()
 		Local player:TPlayer = TPlayer(peer.GetData())
 
-		'Spieler aufgrund seiner Tastendrücke 200 Pixel/Sekunde bewegen lassen
+		'Move them 200 pixels/second based on their key states
 		player.X:+player.GetKey(KEY_LEFT) * -200 * deltaTime + player.GetKey(KEY_RIGHT) * 200 * deltaTime;
 		player.Y:+player.GetKey(KEY_UP) * -200 * deltaTime + player.GetKey(KEY_DOWN) * 200 * deltaTime;
 		
-		'Position auf der X-Achse limitieren		
+		'Limit the position on the x axis
 		If player.X < 0
 			player.X = 0
 		ElseIf player.X > 800
 			player.X = 800
 		EndIf
 		
-		'Position auf der Y-Achse limitieren
+		'Limit the position on the y axis
 		If player.Y < 0
 			player.Y = 0
 		ElseIf player.Y > 600
@@ -147,16 +133,14 @@ Cls
 		End If
 	Next
 	
-	
-	'15 mal pro Sekunde die Position jedes Spielers an jeden Client senden
+	'Send numPosUpdates position updates per second to all clients
 	If MilliSecs() - lastPosUpdate > 1000 / numPosUpdates
 	
-		'Paket erstellen mit Infos zu jedem Spieler
+		'Create a packet containing all player information
 		Local paket:TNetPacket = TNetPacket.Create()
-		paket.WriteByte(5)  'Nachricht-Nr. 5
-		paket.WriteInt(server.GetClients().Count())  'Anzahl Spieler
+		paket.WriteByte(MSG_PLAYERSTATE)
+		paket.WriteInt(server.GetClients().Count())
 		
-		'Spieler-Infos in das Paket schreiben
 		For Local peer:TNetPeer = EachIn server.GetClients()
 			Local player:TPlayer = TPlayer(peer.GetData())
 			paket.WriteString(player.Name)
@@ -164,85 +148,62 @@ Cls
 			paket.WriteFloat(player.Y)
 		Next
 		
-		'Paket an alle Spieler senden
-		'Diesmal als unwichtiges Paket auf Kanal 0, da die Positionen sehr häufig gesendet werden
-		'macht es in der Regel nichts wenn mal 1 Paket verloren geht
+		'Send the packet to all clients (unreliable, on channel 0)
 		server.Broadcast(paket)
 	
-		'Letztes Update = gerade eben
 		lastPosUpdate = MilliSecs()
 	EndIf
-	
 
 Flip -1
 Until AppTerminate() Or KeyHit(KEY_ESCAPE)
 
-'Grafik-Modus beenden
 EndGraphics
 
-'Server herunterfahren
+'Stop the server
 server.Shutdown()
-
-'Programm-Ende
 End
 
-
-'Verarbeitet von Clients empfangene Daten (wenn diese noch nicht Angemeldet sind)
-'event:TNetServerEvent		Event-Objekt mit dem Absender des Pakets und dem Paket selber
-Function DatenVerarbeitung_NichtAngemeldet(event:TNetServerEvent)
-	
-	'Mit dieser Zeile wird das zuvor zugewiesene Spieler-Objekt vom Client geholt
-	'Über dieses Objekt kann z.B. auf den Namen des Spielers zugegriffen werden
+Function ProcessData_NotLoggedIn(event:TNetServerEvent)
 	Local player:TPlayer = TPlayer(event.Peer.GetData())
 
-	'Ein Byte vom Paket lesen
-	'In diesem Beispiel fängt jede Nachricht mit diesem Byte an
-	'Anhand dieses Bytes wird unterschieden welche Daten vom Paket gelesen werden
 	Local msgId:Byte = event.Packet.ReadByte()
 
-	'Je nach dem Wert des Bytes unterschiedliche Daten lesen/senden etc.
 	Select msgId
-
-		'1 = Name (Der Spieler sendet seinen gewünschten Namen)
-		Case 1
-			'Name vom Paket lesen
+		Case MSG_LOGIN
 			Local name:String = event.Packet.ReadString()
 			
-			'Name überprüfen
 			If name = Null Or name.Length < 3 Then
-				'Spieler-Name ist zu KURZ -> Nachricht zurück senden
+				'Player name is too short, reply with a negative response
 				Local paket:TNetPacket = TNetPacket.Create()
-				paket.WriteByte(1)	'Nachricht-Nr. 1
-				paket.WriteByte(0)  'Anmeldung fehlgeschlagen
-				paket.WriteString("Dieser Name ist zu kurz.")  'Fehlermeldung
+				paket.WriteByte(MSG_LOGIN)
+				paket.WriteByte(0)
+				paket.WriteString("The name is too short.")
 				
-				'Das Antwort-Paket zurücksenden, als wichtige Nachricht und auf dem Kanal 1 (nicht komprimiert)
+				'Send packet (reliable, on channel 1)
 				server.Send(event.Peer, paket, True, 1)
 				
 			ElseIf FindPlayer(name) <> Null
-				'Es existiert bereits ein Spieler mit diesem Namen
+				'The name is already in use by another player, reply with a negative response
 				Local paket:TNetPacket = TNetPacket.Create()
-				paket.WriteByte(1)  'Nachricht-Nr. 1
-				paket.WriteByte(0)  'Anmeldung fehlgeschlagen
-				paket.WriteString("Dieser Name wird bereits verwendet.")  'Fehlermeldung
+				paket.WriteByte(MSG_LOGIN)
+				paket.WriteByte(0)
+				paket.WriteString("The name is already in use by another player.")
 				
-				'Das Antwort-Paket zurücksenden, als wichtige Nachricht und auf dem Kanal 1 (nicht komprimiert)
+				'Send packet (reliable, on channel 1)
 				server.Send(event.Peer, paket, True, 1)
 			
 			Else
-				'Spieler-Name ist OK -> Name setzen
-				'(Dadurch gilt der Spieler als angemeldet und darf nun auch andere Nachrichten senden)
+				'Login ok
 				player.name = name
 				
-				'Antwort senden
+				'Create a packet with a positive response
 				Local paket:TNetPacket = TNetPacket.Create()
-				paket.WriteByte(1)  'Nachricht-Nr. 1
-				paket.WriteByte(1)  'Anmeldung erfolgreich (keine Fehlermeldung notwendig)
+				paket.WriteByte(MSG_LOGIN)
+				paket.WriteByte(1)
 				
-				'Infos über alle anderen Spieler in das Paket schreiben
+				'Append information of all other players
 				paket.WriteInt(server.GetClients().Count() - 1)
 				For Local peer:TNetPeer = EachIn server.GetClients()
-					'Eigenen Spieler ignorieren
 					If peer = event.peer Then Continue
 					
 					Local p:TPlayer = TPlayer(peer.GetData())
@@ -251,113 +212,74 @@ Function DatenVerarbeitung_NichtAngemeldet(event:TNetServerEvent)
 					paket.WriteFloat(p.Y)
 				Next
 				
-				'Das Antwort-Paket zurücksenden, als wichtige Nachricht und auf dem Kanal 1 (nicht komprimiert)
+				'Send packet (reliable, on channel 1)
 				server.Send(event.Peer, paket, True, 1)
 
-				'Bereits verbundene Spieler erst jetzt über den neuen Spieler informieren (da nun erst der Name bekannt ist)
-				SendeVerbindungsNachricht(event)
+				'Inform existing players about the new player
+				SendPlayerConnected(event)
 			EndIf
-		
 	End Select
-	
 End Function
 
-
-'Sucht nach einem TPlayer mit dem angegebenen Namen
-'name:String		Name des Spielers
-'Gibt Null oder den Spieler zurück, wenn er gefunden wurde
-Function FindPlayer:TPlayer(name:String)
-	
-	'Gross-/Kleinschreibung des Namens spielt keine Rolle
-	name = name.ToLower()
-
-	For Local peer:TNetPeer = EachIn server.GetClients()
-		'TPlayer-Objekt vom Client holen
-		Local player:TPlayer = TPlayer(peer.GetData())
-		
-		'Prüfen ob der Name übereinstimmt und falls ja, den Spieler zurückgeben
-		If player <> Null And player.name.ToLower() = name Then Return player
-	Next
-
-	'Kein Spieler gefunden
-	Return Null
-End Function
-
-
-'Verarbeitet von Clients empfangene Daten (wenn diese Angemeldet sind)
-'event:TNetServerEvent		Event-Objekt mit dem Absender des Pakets und dem Paket selber
-Function DatenVerarbeitung_Angemeldet(event:TNetServerEvent)
-	
-	'Mit dieser Zeile wird das zuvor zugewiesene Spieler-Objekt vom Client geholt
-	'Über dieses Objekt kann z.B. auf den Namen des Spielers zugegriffen werden
+Function ProcessData_LoggedIn(event:TNetServerEvent)
 	Local player:TPlayer = TPlayer(event.Peer.GetData())
 
-	'Ein Byte vom Paket lesen
-	'In diesem Beispiel fängt jede Nachricht mit diesem Byte an
-	'Anhand dieses Bytes wird unterschieden welche Daten vom Paket gelesen werden
 	Local msgId:Byte = event.Packet.ReadByte()
 
-	'Je nach dem Wert des Bytes unterschiedliche Daten lesen/senden etc.
 	Select msgId
-
-		'4 = Tasten-Status des Clients
-		Case 4
-			'Tasten-Code lesen
+		Case MSG_KEYSTATE
+			'Read key state
 			Local code:Byte = event.Packet.ReadByte()
-			
-			'Status lesen (gedrückt/nicht gedrückt)
 			Local pressed:Byte = event.Packet.ReadByte()
 			
-			'Taste beim Spieler-Objekt aktualisieren
+			'Update the key state on the player object
 			player.SetKey(code, pressed)
 				
 	End Select
-	
 End Function
 
+Function FindPlayer:TPlayer(name:String)
+	name = name.ToLower()
 
-'Sendet eine Verbindungsnachricht an alle anderen Spieler
-'event:TNetServerEvent		Event-Objekt mit dem Client der sich verbunden hat
-Function SendeVerbindungsNachricht(event:TNetServerEvent)
-	
-	'Diese Zeile holt das Spieler-Objekt
-	Local player:TPlayer = TPlayer(event.Peer.GetData())
-
-	'Paket erstellen, dass an alle anderen Spieler gesendet wird
-	Local paket:TNetPacket = TNetPacket.Create()
-	paket.WriteByte(2)  'Nachricht-Nr. 2
-	paket.WriteString(player.Name)  'Name des Spielers
-	paket.WriteFloat(player.X)	'X-Position des Spielers
-	paket.WriteFloat(player.Y)  'Y-Position des Spielers
-	
-	For Local client:TNetPeer = EachIn server.GetClients()
-		'Nicht an den Client senden der sich verbunden hat
-		If client = event.Peer Then Continue
+	For Local peer:TNetPeer = EachIn server.GetClients()
+		Local player:TPlayer = TPlayer(peer.GetData())
 		
-		'Aber an alle anderen Senden
-		server.Send(client, paket, True, 1)
+		If player <> Null And player.name.ToLower() = name Then Return player
 	Next
 
+	Return Null
 End Function
 
-'Sendet eine Trennungsnachricht an alle anderen Spieler
-'event:TNetServerEvent		Event-Objekt mit dem Client der die Verbindung getrennt hat
-Function SendeTrennungsNachricht(event:TNetServerEvent)
-	
-	'Diese Zeile holt das Spieler-Objekt
+Function SendPlayerConnected(event:TNetServerEvent)
 	Local player:TPlayer = TPlayer(event.Peer.GetData())
-	
-	'Paket erstellen, dass an alle anderen Spieler gesendet wird
+
+	'Create a packet containing the information of the local player
 	Local paket:TNetPacket = TNetPacket.Create()
-	paket.WriteByte(3)  'Nachricht-Nr. 3
-	paket.WriteString(player.Name)  'Name des Spielers
+	paket.WriteByte(MSG_NEWPLAYER)
+	paket.WriteString(player.Name)
+	paket.WriteFloat(player.X)
+	paket.WriteFloat(player.Y)
 	
+	'Send packet to all other clients (reliable, on channel 1)
 	For Local client:TNetPeer = EachIn server.GetClients()
-		'Nicht an den Client senden der die Verbindung getrennt hat
 		If client = event.Peer Then Continue
 		
-		'Aber an alle anderen Senden
 		server.Send(client, paket, True, 1)
 	Next
+End Function
 
+Function SendPlayerDisconnected(event:TNetServerEvent)
+	Local player:TPlayer = TPlayer(event.Peer.GetData())
+	
+	'Create a packet containing the name of the local player
+	Local paket:TNetPacket = TNetPacket.Create()
+	paket.WriteByte(MSG_REMOVEPLAYER)
+	paket.WriteString(player.Name)
+	
+	'Send packet to all other clients (reliable, on channel 1)
+	For Local client:TNetPeer = EachIn server.GetClients()
+		If client = event.Peer Then Continue
+		
+		server.Send(client, paket, True, 1)
+	Next
 End Function
