@@ -9,8 +9,8 @@ Quote from http://enet.bespin.org/:
 
 ## Installation:
 
-1. Copy the folder mzehr.net to <BlitzMax installation directory>/mod.
-2. Go to the <BlitzMax installation directory>/bin folder.
+1. Copy the folder mzehr.net to \<BlitzMax installation directory\>/mod.
+2. Go to the \<BlitzMax installation directory\>/bin folder.
 3. Execute the bmk executable to build the module for your platform: "bmk makemods -a mzehr.net"
 
 ## Building and running the example server and client:
