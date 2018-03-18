@@ -1,6 +1,12 @@
 # mzehr.net
 Network module for BlitzMax based on ENet (https://github.com/lsalzman/enet)
 
+Quote from http://enet.bespin.org/:
+
+> ENet's purpose is to provide a relatively thin, simple and robust network communication layer on top of UDP (User Datagram Protocol). The primary feature it provides is optional reliable, in-order delivery of packets.
+
+> ENet omits certain higher level networking features such as authentication, lobbying, server discovery, encryption, or other similar tasks that are particularly application specific so that the library remains flexible, portable, and easily embeddable.
+
 ## Installation:
 
 1. Copy the folder mzehr.net to <BlitzMax installation directory>/mod.
