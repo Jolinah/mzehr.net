@@ -1,43 +1,50 @@
-﻿SuperStrict
+SuperStrict
 
 Framework brl.blitz
 Import brl.basic
 Import brl.glmax2d
 
-'Modul importieren
+'Import the module
 Import mzehr.net
 
 AppTitle = "Client"
 SeedRnd(MilliSecs())
 
-'Kleine Klasse für den eigenen und die anderen Spieler
+'Some constants for the different types of network messages
+Const MSG_LOGIN:Int = 1
+Const MSG_NEWPLAYER:Int = 2
+Const MSG_REMOVEPLAYER:Int = 3
+Const MSG_KEYSTATE:Int = 4
+Const MSG_PLAYERSTATE:Int = 5
+
+'Class containing player information
 Type TPlayer
-	'Liste mit allen Spielern
+	'List containing all players
 	Global List:TList = New TList
 
-	'Name des Spielers
 	Field Name:String
 	
-	'Position des Spielers
+	'Position
 	Field X:Float
 	Field Y:Float
 	
-	Field ZielX:Float
-	Field ZielY:Float
+	'Target position
+	Field TargetX:Float
+	Field TargetY:Float
 
-	Field Initialisiert:Int
+	Field Initialized:Int
 	
 	Method New()
-		'Neue Spieler in die Liste einfügen
+		'Add the new player to the list
 		List.AddLast(Self)
 	End Method
 	
 	Method Update(deltaTime:Float)
-		X = Interpoliere(X, ZielX, 2.0 * deltaTime)
-		Y = Interpoliere(Y, ZielY, 2.0 * deltaTime)
+		'Adjust the position smoothly over time (linear interpolation)
+		X = Interpolate(X, TargetX, 2.0 * deltaTime)
+		Y = Interpolate(Y, TargetY, 2.0 * deltaTime)
 	End Method
 	
-	'Zeichnet den Spieler
 	Method Draw()
 		Local px:Int = Int(X)
 		Local py:Int = Int(Y)
@@ -52,88 +59,82 @@ Type TPlayer
 	End Method
 End Type
 
-
-'Einen neuen Client erstellen
+'Create a new client
 Global client:TNetClient = TNetClient.Create()
 
-'Den lokalen Spieler erstellen
+'Create the local player
 Local myPlayer:TPlayer = New TPlayer
 myPlayer.Name = "Guest" + Rand(1000, 9999)
 
-'Verbindung herstellen
+'Connect to the server
 If client.Connect("localhost", 50000)
-	'Login-Paket erstellen
+	'Create the login packet
 	Local paket:TNetPacket = TNetPacket.Create()
-	paket.WriteByte(1)  'Nachricht-Nr. 1
-	paket.WriteString(myPlayer.Name)  'Name des eigenen Spielers
+	paket.WriteByte(MSG_LOGIN)
+	paket.WriteString(myPlayer.name)
 	
-	'Paket an den Server senden (wichtige Nachricht auf Kanal 1)
+	'Send the packet to the server (reliable, on channel 1)
 	client.Send(paket, True, 1)
 	
-	'Maximal 2 Sekunden auf die Antwort des Servers warten
+	'Await the response from the server (wait for a maximum time of 2 seconds)
 	Local event:TNetClientEvent = client.Update(2000)
+	
+	'Data received
 	If event <> Null And event.event = TNetClientEvent.DATA
-		'Daten empfangen
 		
+		'Read the response from the server
 		Local msgId:Byte = event.Packet.ReadByte()
-		If msgId = 1
-			'Antwort auslesen
+		If msgId = MSG_LOGIN
 			Local loggedIn:Int = event.Packet.ReadByte()
 			If loggedIn
-				'Bestehende Spieler einlesen
 				Local numPlayers:Int = event.Packet.ReadInt()
 				For Local i:Int = 0 To numPlayers - 1
-					'Spielerdaten lesen
+					'Read existing player information
 					Local name:String = event.Packet.ReadString()
 					Local x:Float = event.Packet.ReadFloat()
 					Local y:Float = event.Packet.ReadFloat()
 					
-					'Spieler erstellen
+					'Create a player object for each existing player
 					Local player:TPlayer = New TPlayer
 					player.name = name
 					player.X = x
 					player.Y = y
-					player.ZielX = x
-					player.ZielY = y
+					player.TargetX = x
+					player.TargetY = y
 				Next
 			Else
-				'Login fehlgeschlagen
+				'Login failed
 				Local error:String = event.Packet.ReadString()
 				client.Disconnect()
 				Notify(error)
 				End
 			End If
 		Else
-			'Ungültige Antwort
 			client.Disconnect()
-			Notify("Der Server hat eine unerwartete Antwort gesendet. Protokoll-Fehler?")
+			Notify("The server responded with an invalid message id. Protocol error?")
 			End
 		End If
 	Else
-		'Keine Antwort
 		client.Disconnect()
-		Notify("Der Server hat innerhalb von 2 Sekunden keine Antwort gesendet. Verbindung fehlgeschlagen.")
+		Notify("The server did not respond to the login within 2 seconds. Connection failed.")
 		End
 	End If
 Else
-	'Connect schlug fehl
-	Notify "Es konnte keine Verbindung hergestellt werden."
+	Notify "Could not connect to the server."
 	End
 End If
 
+'At this point the connection is established and the local player successfully logged in.
 
-'An dieser Stelle ist die Verbindung hergestellt und der Spieler eingeloggt
-
-'Grafik initialisieren
 Graphics 800, 600, 0
 
-'Variable zum Zwischenspeichern von Tasten-Stati 
+'Buffer of key states
 Local keyState:Byte[] = New Byte[256]
 
-'Variable zum Beenden des Programms aus der Hauptschleife heraus
+'App will be quit if this variable is set to a quit reason
 Local quitApp:String = Null
 
-'Variablen für die Zeitmessung eines Frames (Frame-Unabhängige Programmierung)
+'Frame measurement for frame independent movement
 Local deltaTime:Float = 0
 Local lastFrame:Int = MilliSecs()
 
@@ -142,33 +143,31 @@ deltaTime = (MilliSecs() - lastFrame) / 1000.0
 lastFrame = MilliSecs()
 Cls
 
-	'Status-Änderungen von Tasten an den Server senden
+	'Send messages to the server whenever the key down state changes
 	UpdateKey(KEY_UP, keyState[KEY_UP])
 	UpdateKey(KEY_DOWN, keyState[KEY_DOWN])
 	UpdateKey(KEY_LEFT, keyState[KEY_LEFT])
 	UpdateKey(KEY_RIGHT, keyState[KEY_RIGHT])
 
-	'Client aktualisieren (empfangen/senden)
+	'Update the client (receive/send)
 	Local event:TNetClientEvent = client.Update()
 	While event <> Null
 		Select event.event
-			'Der Server hat die Verbindung getrennt
 			Case TNetClientEvent.DISCONNECT
-				quitApp = "Der Server hat die Verbindung getrennt."
+				quitApp = "The server has closed the connection."
 			
-			'Daten vom Server empfangen
+			'Data received form the server
 			Case TNetClientEvent.DATA
-				'Daten verarbeiten
-				DatenVerarbeitung(event)
+				ProcessData(event)
 				
 		End Select
 	
-		'Nächstes Ereignis abrufen
+		'Fetch next event (if any)
 		event = client.Update()
 	Wend
 
 	
-	'Alle Spieler aktualisieren und zeichnen
+	'Update and draw all players
 	For Local player:TPlayer = EachIn TPlayer.List
 		player.Update(deltaTime)
 		player.Draw()
@@ -179,119 +178,97 @@ Until AppTerminate() Or KeyHit(KEY_ESCAPE) Or quitApp <> Null
 
 EndGraphics
 
-'Client schliessen
 client.Disconnect()
 
-'Grund für das Beenden des Programms anzeigen (falls gegeben)
+'If there is a quit reason, show a message box
 If quitApp <> Null Then Notify(quitApp)
 
 End
 
-
-'Findet einen Spieler per Name
 Function FindPlayer:TPlayer(name:String)
-	'Gross-/Kleinschreibung spielt keine Rolle
 	name = name.ToLower()
 
 	For Local player:TPlayer = EachIn TPlayer.List
-		'Namen überprüfen, falls sie identisch sind den Spieler zurückgeben
 		If player.name.ToLower() = name Then Return player
 	Next
 	
-	'Kein Spieler gefunden
 	Return Null
 End Function
 
-
-'Sendet Status-Änderungen einer bestimmten Taste (falls notwendig)
 Function UpdateKey(code:Int, lastState:Byte Var)
-	'Update erforderlich?
 	Local update:Int = False
 
 	If KeyDown(code) And Not lastState Then
 		lastState = True
-		update = True  'Update veranlassen
+		update = True
 	Else If lastState And Not KeyDown(code) Then
 		lastState = False
-		update = True  'Update veranlassen
+		update = True
 	End If
 	
-	'Update falls erforderlich
 	If update Then
-		'Paket erstellen
+		'Create a packet containing the key down state of the key
 		Local paket:TNetPacket = TNetPacket.Create()
-		paket.WriteByte(4)  'Nachricht-Nr. 4
-		paket.WriteByte(code)  'Taste
-		paket.WriteByte(lastState)  'Status
+		paket.WriteByte(MSG_KEYSTATE)
+		paket.WriteByte(code)
+		paket.WriteByte(lastState)
 		
-		'Paket senden
+		'Send the packet (reliable, on channel 1)
 		client.Send(paket, True, 1)
 	End If
 End Function
 
-
-'Verarbeitet die vom Server empfangenen Daten
-'event:TNetClientEvent		Event-Objekt welches den Absender der Nachricht und das Paket selbst enthält
-Function DatenVerarbeitung(event:TNetClientEvent)
-
-	'Ein Byte vom Paket lesen
-	'In diesem Beispiel fängt jede Nachricht mit diesem Byte an
-	'Anhand dieses Bytes wird unterschieden welche Daten vom Paket gelesen werden
+Function ProcessData(event:TNetClientEvent)
 	Local msgId:Byte = event.Packet.ReadByte()
 	
-	'Je nach dem Wert des Bytes unterschiedliche Daten lesen/senden etc.
 	Select msgId
-		'2 = Neuer Mitspieler
-		Case 2
-			'Daten lesen
+		Case MSG_NEWPLAYER
+			'Read player information
 			Local name:String = event.Packet.ReadString()
 			Local x:Float = event.Packet.ReadFloat()
 			Local y:Float = event.Packet.ReadFloat()
 
-			'Spieler erstellen
+			'Create a player
 			Local player:TPlayer = New TPlayer
 			player.Name = name
 			player.X = x
 			player.Y = y
-			player.ZielX = x
-			player.ZielY = y
+			player.TargetX = x
+			player.TargetY = y
 			
-		'3 = Spieler verlässt das Spiel
-		Case 3
-			'Daten lesen
+		Case MSG_REMOVEPLAYER
 			Local name:String = event.Packet.ReadString()
 			
-			'Spieler entfernen
+			'Remove the player with the given name
 			Local player:TPlayer = FindPlayer(name)
 			If player <> Null Then TPlayer.List.Remove(player)
 				
-		'5 = Positions-Updates
-		Case 5
-			'Anzahl Spieler im Update lesen
+		Case MSG_PLAYERSTATE
 			Local numPlayers:Int = event.Packet.ReadInt()
 			
 			For Local i:Int = 0 To numPlayers - 1
-				'Daten von einem Spieler lesen
+				'Read player information
 				Local name:String = event.Packet.ReadString()
 				Local x:Float = event.Packet.ReadFloat()
 				Local y:Float = event.Packet.ReadFloat()
 				
-				'Spieler suchen und Position aktualisieren
+				'Find the player by name and update his target position
 				Local player:TPlayer = FindPlayer(name)
 				If player <> Null Then
-					If Not player.Initialisiert
+					If Not player.Initialized
 						player.X = x
 						player.Y = y
-						player.Initialisiert = True
+						player.Initialized = True
 					End If
-					player.ZielX = x
-					player.ZielY = y
+					player.TargetX = x
+					player.TargetY = y
 				End If
 			Next
 	End Select
 End Function
 
-Function Interpoliere:Float(aktuell:Float, neu:Float, faktor:Float)
+'Linear interpolation
+Function Interpolate:Float(aktuell:Float, neu:Float, faktor:Float)
 	faktor = Clamp01(faktor)
 	Return ((1.0 - faktor) * aktuell) + (faktor * neu)
 End Function
