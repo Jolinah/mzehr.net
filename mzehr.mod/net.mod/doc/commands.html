@@ -1,0 +1,526 @@
+<html><head><title>Network module based on ENet (http://enet.bespin.org) reference</title>
+<link rel=stylesheet Type=text/css href='../../../../doc/bmxstyle.css'>
+</head><body>
+<table width=100% cellspacing=0><tr align=center><td class=small>&nbsp;</td>
+<td class=small width=1%><b>mzehr.net:</b></td>
+<td class=small width=1%><a href=#types class=small>Types</a></td>
+<td class=small width=1%><a href=#modinfo class=small>Modinfo</a></td>
+<td class=small width=1%><a href='../../../../mod/mzehr.mod/net.mod/net.bmx' class=small>Source</a></td>
+<td class=small>&nbsp;</td></tr></table>
+<h1>Network module based on ENet (http://enet.bespin.org)</h1>
+<h2><a name=types></a>Types Summary</h2><table class=doc width=100%>
+<tr><td class=docleft width=1%><a href=#TNetClient>TNetClient</a></td><td class=docright>
+Class used to establish a connection with a server.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#TNetClientEvent>TNetClientEvent</a></td><td class=docright>
+An event raised by the client.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#TNetPacket>TNetPacket</a></td><td class=docright>
+A data packet/message. Data can be written into or read from the packet.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#TNetPeer>TNetPeer</a></td><td class=docright>
+Represents a peer/client/player on the server.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#TNetServer>TNetServer</a></td><td class=docright>
+Class used to run a server.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#TNetServerEvent>TNetServerEvent</a></td><td class=docright>
+An event raised by the server.
+</td></tr>
+</table>
+<h2
+ id=typesdet>Types
+</h2>
+<table class=doc width=100% cellspacing=3 id=TNetClient>
+<tr><td class=doctop colspan=2>Type TNetClient</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Class used to establish a connection with a server.</td></tr>
+</table>
+<table class=doc width=90% align=center><tr ><th class=doctop colspan=2 align=left><a name=TNetClient_methods></a>Methods Summary</th></tr>
+<tr><td class=docleft width=1%><a href=#Connect>Connect</a></td><td class=docright>
+Establishes a connection with a server.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#Disconnect>Disconnect</a></td><td class=docright>
+Closes the connection to the server.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#Flush>Flush</a></td><td class=docright>
+Sends all buffered messages as soon as possible or immediately.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#Send>Send</a></td><td class=docright>
+Sends a packet / a message to the server.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#Update>Update</a></td><td class=docright>
+Updates the client (receives and sends messages).
+</td></tr>
+</table>
+<table class=doc width=90% align=center><tr ><th class=doctop colspan=2 align=left><a name=TNetClient_functions></a>Functions Summary</th></tr>
+<tr><td class=docleft width=1%><a href=#Create>Create</a></td><td class=docright>
+Creates a new and unconnected client.
+</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=Connect>
+<tr><td class=doctop colspan=2>Method Connect:Int(host:String, port:Int, connectTimeout:Int = 5000, channelCount:Int = 2)</td></tr>
+<tr><td class=docleft width=1%>Returns</td><td class=docright>True if the connection has been established, False if not.</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Establishes a connection with a server.</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright><pre>
+host:String			IP address or hostname on which to listen for incoming connections.
+port:Int			Port on which to listen for incoming connections.
+connectTimeout:Int		(Optional) Maximum time in ms to wait for the connection.
+channelCount:Int		(Optional) Number of communication channels. Will be limited to 1-255. (Default: 2)
+</pre></td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=Disconnect>
+<tr><td class=doctop colspan=2>Method Disconnect(disconnectTime:Int = 2000)</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Closes the connection to the server.</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright><pre>
+disconnectTime:Int		(Optional) Maximum time in ms to wait for remaining messages to be sent before the connection will be closed.
+</pre></td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=Flush>
+<tr><td class=doctop colspan=2>Method Flush()</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Sends all buffered messages as soon as possible or immediately.</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright>It's better to use Update, because Update does almost the same and also receives incoming messages.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=Send>
+<tr><td class=doctop colspan=2>Method Send(packet:TNetPacket, reliable:Int = False, channel:Int = 0, compressed:Int = False)</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Sends a packet / a message to the server.</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright><pre>
+packet:TNetPacket		The packet that will be sent
+reliable:Int			(Optional) Whether the packet should be sent reliable or not (Default: False, this is suitable for unimportant anf fast data like player positions)
+channel:Int			(Optional) The channel used for transmitting the packet (Default: 0, reliable/important messages should be sent on a different channel than unimportant messages, for example channel 1)
+compressed:Int			(Optional) Whether the data will be compressed or not (Default: False, should only be used with large data, i.e. when sending 100x100 tiles etc.)
+</pre></td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=Update>
+<tr><td class=doctop colspan=2>Method Update:TNetClientEvent(waitTime:Int = 0)</td></tr>
+<tr><td class=docleft width=1%>Returns</td><td class=docright>An object of type TNetClientEvent that represents the last event or Null if there was no event.</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Updates the client (receives and sends messages).</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright><pre>
+waitTime:Int		(Optional) Time in ms to wait for incoming messages. (Default = 0, this means the function will return immediatley if there are no messages to receive).
+</pre></td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=Create>
+<tr><td class=doctop colspan=2>Function Create:TNetClient()</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Creates a new and unconnected client.</td></tr>
+</table>
+<br>
+<table class=doc width=100% cellspacing=3 id=TNetClientEvent>
+<tr><td class=doctop colspan=2>Type TNetClientEvent</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>An event raised by the client.</td></tr>
+</table>
+<table class=doc width=90% align=center><tr ><th class=doctop colspan=2 align=left><a name=TNetClientEvent_consts></a>Constants Summary</th></tr><tr><td colspan=2>
+<a href=#CONNECT>CONNECT</a>
+, 
+<a href=#DATA>DATA</a>
+, 
+<a href=#DISCONNECT>DISCONNECT</a>
+</td></tr>
+</table>
+<table class=doc width=90% align=center><tr ><th class=doctop colspan=2 align=left><a name=TNetClientEvent_fields></a>Fields Summary</th></tr><tr><td colspan=2>
+<a href=#Channel>Channel</a>
+, 
+<a href=#Event>Event</a>
+, 
+<a href=#Packet>Packet</a>
+</table>
+<table class=doc width=100% cellspacing=3 id=CONNECT>
+<tr><td class=doctop colspan=2>Const CONNECT:Int</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Server: A new client has established a connection with the server. | Client: The connection with the server has been established.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=DATA>
+<tr><td class=doctop colspan=2>Const DATA:Int</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Data received (client: from the server | server: from a specific client).</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=DISCONNECT>
+<tr><td class=doctop colspan=2>Const DISCONNECT:Int</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>The connection was closed (client: connection with the server | server: connection with a specific client).</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=Channel>
+<tr><td class=doctop colspan=2>Field Channel:Int</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>The channel on which the packet was received.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=Event>
+<tr><td class=doctop colspan=2>Field Event:Int</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Event that was raised (equals to TNetClientEvent.CONNECT or DATA).</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=Packet>
+<tr><td class=doctop colspan=2>Field Packet:TNetPacket</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>The packet that was received (only available in a DATA event).</td></tr>
+</table>
+<br>
+<table class=doc width=100% cellspacing=3 id=TNetPacket>
+<tr><td class=doctop colspan=2>Type TNetPacket</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>A data packet/message. Data can be written into or read from the packet.</td></tr>
+</table>
+<table class=doc width=90% align=center><tr ><th class=doctop colspan=2 align=left><a name=TNetPacket_methods></a>Methods Summary</th></tr>
+<tr><td class=docleft width=1%><a href=#Destroy>Destroy</a></td><td class=docright>
+Releases the memory used by the packet.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#EnetPacket>EnetPacket</a></td><td class=docright>
+Converts the packet to an ENet packet struct.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#Read>Read</a></td><td class=docright>
+Reads multiple Bytes from the packet and writes them to the specified memory location.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#ReadByte>ReadByte</a></td><td class=docright>
+Reads a byte from the packet.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#ReadBytes>ReadBytes</a></td><td class=docright>
+Reads multiple Bytes from the packet and writes them to the specified memory location.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#ReadDouble>ReadDouble</a></td><td class=docright>
+Reads a double from the packet.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#ReadFloat>ReadFloat</a></td><td class=docright>
+Reads a float from the packet.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#ReadInt>ReadInt</a></td><td class=docright>
+Reads an int from the packet.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#ReadLine>ReadLine</a></td><td class=docright>
+Reads a line of text from the packet.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#ReadLong>ReadLong</a></td><td class=docright>
+Reads a long from the packet.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#ReadObject>ReadObject</a></td><td class=docright>
+Reads an object from the packet (untested).
+</td></tr>
+<tr><td class=docleft width=1%><a href=#ReadShort>ReadShort</a></td><td class=docright>
+Reads a short from the packet.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#ReadString>ReadString</a></td><td class=docright>
+Reads a string from the packet.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#Write>Write</a></td><td class=docright>
+Writes multiple bytes into the packet.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#WriteByte>WriteByte</a></td><td class=docright>
+Writes a byte into the packet.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#WriteBytes>WriteBytes</a></td><td class=docright>
+Writes multiple bytes into the packet.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#WriteDouble>WriteDouble</a></td><td class=docright>
+Writes a double into the packet.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#WriteFloat>WriteFloat</a></td><td class=docright>
+Writes a float into the packet.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#WriteInt>WriteInt</a></td><td class=docright>
+Writes an int into the packet.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#WriteLine>WriteLine</a></td><td class=docright>
+Writes a line of text into the packet.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#WriteLong>WriteLong</a></td><td class=docright>
+Writes a long into the packet.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#WriteObject>WriteObject</a></td><td class=docright>
+Writes an object to the packet (untested).
+</td></tr>
+<tr><td class=docleft width=1%><a href=#WriteShort>WriteShort</a></td><td class=docright>
+Writes a short into the packet.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#WriteString>WriteString</a></td><td class=docright>
+Writes a string into the packet.
+</td></tr>
+</table>
+<table class=doc width=90% align=center><tr ><th class=doctop colspan=2 align=left><a name=TNetPacket_functions></a>Functions Summary</th></tr>
+<tr><td class=docleft width=1%><a href=#Create>Create</a></td><td class=docright>
+Creates a new packet (for sending).
+</td></tr>
+<tr><td class=docleft width=1%><a href=#FromEnet>FromEnet</a></td><td class=docright>
+Reads a packet from an ENet packet struct.
+</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=Destroy>
+<tr><td class=doctop colspan=2>Method Destroy()</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Releases the memory used by the packet.</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright>Will be called automatically on deconstruction of the object (garbage collector), but can also be called manually.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=EnetPacket>
+<tr><td class=doctop colspan=2>Method EnetPacket:Byte Ptr(enet_flags:Int = 0, compressed:Int = False)</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Converts the packet to an ENet packet struct.</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright>This method is used internally and should not be called manually.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=Read>
+<tr><td class=doctop colspan=2>Method Read:Int(buf:Byte Ptr, count:Int)</td></tr>
+<tr><td class=docleft width=1%>Returns</td><td class=docright>Number of successfully read bytes.</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Reads multiple Bytes from the packet and writes them to the specified memory location.</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright><pre>
+buf:Byte Ptr		Memory location where the bytes will be written to.
+count:Int		Number of bytes that should be read.
+</pre></td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=ReadByte>
+<tr><td class=doctop colspan=2>Method ReadByte:Byte()</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Reads a byte from the packet.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=ReadBytes>
+<tr><td class=doctop colspan=2>Method ReadBytes:Int(buf:Byte Ptr, count:Int)</td></tr>
+<tr><td class=docleft width=1%>Returns</td><td class=docright>Number of successfully read bytes.</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Reads multiple Bytes from the packet and writes them to the specified memory location.</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright><pre>
+buf:Byte Ptr		Memory location where the bytes will be written to.
+count:Int		Number of bytes that should be read.
+</pre></td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=ReadDouble>
+<tr><td class=doctop colspan=2>Method ReadDouble:Double()</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Reads a double from the packet.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=ReadFloat>
+<tr><td class=doctop colspan=2>Method ReadFloat:Float()</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Reads a float from the packet.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=ReadInt>
+<tr><td class=doctop colspan=2>Method ReadInt:Int()</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Reads an int from the packet.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=ReadLine>
+<tr><td class=doctop colspan=2>Method ReadLine:String()</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Reads a line of text from the packet.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=ReadLong>
+<tr><td class=doctop colspan=2>Method ReadLong:Long()</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Reads a long from the packet.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=ReadObject>
+<tr><td class=doctop colspan=2>Method ReadObject:Object()</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Reads an object from the packet (untested).</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=ReadShort>
+<tr><td class=doctop colspan=2>Method ReadShort:Short()</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Reads a short from the packet.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=ReadString>
+<tr><td class=doctop colspan=2>Method ReadString:String()</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Reads a string from the packet.</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright>Reads an int that specifies the length of the string and then the string itself.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=Write>
+<tr><td class=doctop colspan=2>Method Write(buf:Byte Ptr, count:Int)</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Writes multiple bytes into the packet.</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright><pre>
+buf:Byte Ptr		Memory location from where the data is read and then written to the packet.
+count:Int		Number of bytes that should be read/written.
+</pre></td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=WriteByte>
+<tr><td class=doctop colspan=2>Method WriteByte(value:Byte)</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Writes a byte into the packet.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=WriteBytes>
+<tr><td class=doctop colspan=2>Method WriteBytes(buf:Byte Ptr, count:Int)</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Writes multiple bytes into the packet.</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright><pre>
+buf:Byte Ptr		Memory location from where the data is read and then written to the packet.
+count:Int		Number of bytes that should be read/written.
+</pre></td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=WriteDouble>
+<tr><td class=doctop colspan=2>Method WriteDouble(value:Double)</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Writes a double into the packet.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=WriteFloat>
+<tr><td class=doctop colspan=2>Method WriteFloat(value:Float)</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Writes a float into the packet.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=WriteInt>
+<tr><td class=doctop colspan=2>Method WriteInt(value:Int)</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Writes an int into the packet.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=WriteLine>
+<tr><td class=doctop colspan=2>Method WriteLine(value:String)</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Writes a line of text into the packet.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=WriteLong>
+<tr><td class=doctop colspan=2>Method WriteLong(value:Long)</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Writes a long into the packet.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=WriteObject>
+<tr><td class=doctop colspan=2>Method WriteObject(value:Object)</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Writes an object to the packet (untested).</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=WriteShort>
+<tr><td class=doctop colspan=2>Method WriteShort(value:Short)</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Writes a short into the packet.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=WriteString>
+<tr><td class=doctop colspan=2>Method WriteString(value:String)</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Writes a string into the packet.</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright>Writes an int containing the length of the string followed by the string itself.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=Create>
+<tr><td class=doctop colspan=2>Function Create:TNetPacket()</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Creates a new packet (for sending).</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=FromEnet>
+<tr><td class=doctop colspan=2>Function FromEnet:TNetPacket(p:Byte Ptr)</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Reads a packet from an ENet packet struct.</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright>This function is used internally and should not be called manually.</td></tr>
+</table>
+<br>
+<table class=doc width=100% cellspacing=3 id=TNetPeer>
+<tr><td class=doctop colspan=2>Type TNetPeer</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Represents a peer/client/player on the server.</td></tr>
+</table>
+<table class=doc width=90% align=center><tr ><th class=doctop colspan=2 align=left><a name=TNetPeer_methods></a>Methods Summary</th></tr>
+<tr><td class=docleft width=1%><a href=#GetData>GetData</a></td><td class=docright>
+Gets the data assigned to this peer (see SetData).
+</td></tr>
+<tr><td class=docleft width=1%><a href=#GetPeer>GetPeer</a></td><td class=docright>
+Returns the ENet peer struct.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#SetData>SetData</a></td><td class=docright>
+Assigns a custom data object to this peer.
+</td></tr>
+</table>
+<table class=doc width=90% align=center><tr ><th class=doctop colspan=2 align=left><a name=TNetPeer_functions></a>Functions Summary</th></tr>
+<tr><td class=docleft width=1%><a href=#Create>Create</a></td><td class=docright>
+Creates a new peer from an ENet peer struct.
+</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=GetData>
+<tr><td class=doctop colspan=2>Method GetData:Object()</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Gets the data assigned to this peer (see SetData).</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=GetPeer>
+<tr><td class=doctop colspan=2>Method GetPeer:Byte Ptr()</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Returns the ENet peer struct.</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright>This methos is used internally by the server and should not be called manually.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=SetData>
+<tr><td class=doctop colspan=2>Method SetData(value:Object)</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Assigns a custom data object to this peer.</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright>This can be used to assign a player object or other data to the peer.
+On the server, you can retrieve a list of connected peers with TNetServer.GetClients() and those
+peers (TNetPeer) contain the assigned data object which can be fetched by calling TNetPeer.GetData().</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=Create>
+<tr><td class=doctop colspan=2>Function Create:TNetPeer(peer:Byte Ptr)</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Creates a new peer from an ENet peer struct.</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright>This method is used internally by the server and should not be called manually.</td></tr>
+</table>
+<br>
+<table class=doc width=100% cellspacing=3 id=TNetServer>
+<tr><td class=doctop colspan=2>Type TNetServer</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Class used to run a server.</td></tr>
+</table>
+<table class=doc width=90% align=center><tr ><th class=doctop colspan=2 align=left><a name=TNetServer_methods></a>Methods Summary</th></tr>
+<tr><td class=docleft width=1%><a href=#Broadcast>Broadcast</a></td><td class=docright>
+Sends a packet to all connected peers / players.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#DisconnectClient>DisconnectClient</a></td><td class=docright>
+Sends a disconnect message to the peer / player and closes the connection after the message has been acknowledged.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#DropClient>DropClient</a></td><td class=docright>
+Closes the connection to a peer immediately. The peer won't be notified and will only notice the disconnection after the ping timeout.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#Flush>Flush</a></td><td class=docright>
+Sends all buffered messages as soon as possible or immediately.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#GetClients>GetClients</a></td><td class=docright>
+Gets a list containing all the connected peers / players.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#Send>Send</a></td><td class=docright>
+Sends a packet to the specified peer / player.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#Shutdown>Shutdown</a></td><td class=docright>
+Shuts down the server.
+</td></tr>
+<tr><td class=docleft width=1%><a href=#Update>Update</a></td><td class=docright>
+Updates the server (receives and sends messages).
+</td></tr>
+</table>
+<table class=doc width=90% align=center><tr ><th class=doctop colspan=2 align=left><a name=TNetServer_functions></a>Functions Summary</th></tr>
+<tr><td class=docleft width=1%><a href=#Create>Create</a></td><td class=docright>
+Creates a new server that listens for incoming connections on the specified ip address and port.
+</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=Broadcast>
+<tr><td class=doctop colspan=2>Method Broadcast(packet:TNetPacket, reliable:Int = False, channel:Int = 0, compressed:Int = False)</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Sends a packet to all connected peers / players.</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright><pre>
+packet:TNetPacket	The packet that will be sent.
+reliable:Int		(Optional) Whether the packet should be sent reliable or not (Default: False, this is suitable for unimportant anf fast data like player positions)
+channel:Int		(Optional) The channel used for transmitting the packet (Default: 0, reliable/important messages should be sent on a different channel than unimportant messages, for example channel 1).
+compressed:Int		(Optional) Whether the data will be compressed or not (Default: False, should only be used with large data, i.e. when sending 100x100 tiles etc.)
+</pre></td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=DisconnectClient>
+<tr><td class=doctop colspan=2>Method DisconnectClient(peer:TNetPeer)</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Sends a disconnect message to the peer / player and closes the connection after the message has been acknowledged.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=DropClient>
+<tr><td class=doctop colspan=2>Method DropClient(peer:TNetPeer)</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Closes the connection to a peer immediately. The peer won't be notified and will only notice the disconnection after the ping timeout.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=Flush>
+<tr><td class=doctop colspan=2>Method Flush()</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Sends all buffered messages as soon as possible or immediately.</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright>It's better to use Update, because Update does almost the same and also receives incoming messages.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=GetClients>
+<tr><td class=doctop colspan=2>Method GetClients:TList()</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Gets a list containing all the connected peers / players.</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright>You should not modify the list in any way! Use the DisconnectClient or DropClient functions instead.</td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=Send>
+<tr><td class=doctop colspan=2>Method Send(peer:TNetPeer, packet:TNetPacket, reliable:Int = False, channel:Int = 0, compressed:Int = False)</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Sends a packet to the specified peer / player.</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright><pre>
+peer:TNetPeer		The peer / player that will receive the packet.
+packet:TNetPacket	The packet that will be sent.
+reliable:Int		(Optional) Whether the packet should be sent reliable or not (Default: False, this is suitable for unimportant anf fast data like player positions)
+channel:Int		(Optional) The channel used for transmitting the packet (Default: 0, reliable/important messages should be sent on a different channel than unimportant messages, for example channel 1).
+compressed:Int		(Optional) Whether the data will be compressed or not (Default: False, should only be used with large data, i.e. when sending 100x100 tiles etc.)
+</pre></td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=Shutdown>
+<tr><td class=doctop colspan=2>Method Shutdown(shutdownTime:Int = 5000)</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Shuts down the server.</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright><pre>
+shutdownTime:Int		(Optional) Maximum time in ms to wait for the remaining messages to be sent before shutting down. (Default: 5000)
+</pre></td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=Update>
+<tr><td class=doctop colspan=2>Method Update:TNetServerEvent(waitTime:Int = 0)</td></tr>
+<tr><td class=docleft width=1%>Returns</td><td class=docright>An object of Type TNetServerEvent tha represents the last event or null if there was no event.</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Updates the server (receives and sends messages).</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright><pre>
+waitTime:Int			(Optional) Time in ms to wait for incoming messages. (Default = 0, this means the function will return immediatley if there are no messages to receive).
+</pre></td></tr>
+</table>
+<table class=doc width=100% cellspacing=3 id=Create>
+<tr><td class=doctop colspan=2>Function Create:TNetServer(ip:String, port:Int, maxConnections:Int, maxChannels:Int = 2)</td></tr>
+<tr><td class=docleft width=1%>Returns</td><td class=docright>An object of Type TNetServer or Null in case the server could not be started.</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>Creates a new server that listens for incoming connections on the specified ip address and port.</td></tr>
+<tr><td class=docleft width=1%>Information</td><td class=docright><pre>
+ip:String			IP address on which to listen for incoming connections (use Null, "127.0.0.1" or "localhost" to listen on all local addresses).
+port:Int			Port number (should be greater than 1000 and as high as possible, i.e. 50000 or another number that is not used by other protocols or services).
+maxConnections:Int		Maximum number of allowed connections / players.
+maxChannels:Int			(Optional) Maximum number of communication channels. Will be limited to 1-255. (Default: 2)
+</pre></td></tr>
+</table>
+<br>
+<table class=doc width=100% cellspacing=3 id=TNetServerEvent>
+<tr><td class=doctop colspan=2>Type TNetServerEvent Extends TNetClientEvent</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>An event raised by the server.</td></tr>
+</table>
+<table class=doc width=90% align=center><tr ><th class=doctop colspan=2 align=left><a name=TNetServerEvent_fields></a>Fields Summary</th></tr><tr><td colspan=2>
+<a href=#Peer>Peer</a>
+</table>
+<table class=doc width=100% cellspacing=3 id=Peer>
+<tr><td class=doctop colspan=2>Field Peer:TNetPeer</td></tr>
+<tr><td class=docleft width=1%>Description</td><td class=docright>The client that received data/connected/disconnected.</td></tr>
+</table>
+<br>
+<h2 id=modinfo>Module Information</h2>
+<table width=100%>
+<tr><th width=1%>Author</th><td>Michael Zehr (Jolinah)</td></tr>
+<tr><th width=1%>License</th><td>MIT X11 License (License.txt)</td></tr>
+<tr><th width=1%>Credit</th><td>Lee Salzman (http://enet.bespin.org)</td></tr>
+<tr><th width=1%>History</th><td>1.0 First release</td></tr>
+<tr><th width=1%>History</th><td>1.1 Instead of importing pub.enet, the newest source code of ENet has been compiled into the module (version 1.3.13 as of now). However, the protocol of ENet version 1.3 and above is not compatible with ENet versions 1.2 and below. You will need to redistribute the client to all existing players after updating the server or they won't be able to play on the new server.</td></tr>
+</body></html>
