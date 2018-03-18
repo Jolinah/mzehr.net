@@ -1,5 +1,9 @@
 ﻿SuperStrict
 
+Framework brl.blitz
+Import brl.basic
+Import brl.glmax2d
+
 'Modul importieren
 Import mzehr.net
 
